@@ -1,20 +1,34 @@
 import cors from "cors";
-import express from "express";
+import express, { type Express } from "express";
 import helmet from "helmet";
+import { env } from "./config/env.js";
+import { errorHandler } from "./middleware/error-handler.js";
+import { notFoundHandler } from "./middleware/not-found.js";
 import { healthRouter } from "./routes/health.js";
 
-export function createApp() {
+export function createApp(): Express {
   const app = express();
 
-  app.use(helmet());
+  app.disable("x-powered-by");
+  app.set("trust proxy", 1);
+
   app.use(
-    cors({
-      origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+    helmet({
+      contentSecurityPolicy: env.NODE_ENV === "production",
     }),
   );
-  app.use(express.json());
+  app.use(
+    cors({
+      origin: env.CORS_ORIGIN,
+      credentials: true,
+    }),
+  );
+  app.use(express.json({ limit: "1mb" }));
 
-  app.use("/health", healthRouter);
+  app.use("/api/v1/health", healthRouter);
+
+  app.use(notFoundHandler);
+  app.use(errorHandler);
 
   return app;
 }
