@@ -1,34 +1,33 @@
-import cors from "cors";
-import express, { type Express } from "express";
+import "dotenv/config";
+
+import express from "express";
 import helmet from "helmet";
-import { env } from "./config/env.js";
-import { errorHandler } from "./middleware/error-handler.js";
-import { notFoundHandler } from "./middleware/not-found.js";
-import { healthRouter } from "./routes/health.js";
 
-export function createApp(): Express {
-  const app = express();
+import { authRouter } from "./routes/auth.routes.js";
 
-  app.disable("x-powered-by");
-  app.set("trust proxy", 1);
+const app = express();
 
-  app.use(
-    helmet({
-      contentSecurityPolicy: env.NODE_ENV === "production",
-    }),
-  );
-  app.use(
-    cors({
-      origin: env.CORS_ORIGIN,
-      credentials: true,
-    }),
-  );
-  app.use(express.json({ limit: "1mb" }));
+app.use(helmet());
 
-  app.use("/api/v1/health", healthRouter);
+app.use(express.json());
 
-  app.use(notFoundHandler);
-  app.use(errorHandler);
+app.use("/auth", authRouter);
 
-  return app;
-}
+app.use(
+  (
+    error: unknown,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    console.error(error);
+
+    return res.status(500).json({
+      error: "INTERNAL_SERVER_ERROR",
+    });
+  },
+);
+
+app.listen(3000, () => {
+  console.log("API listening on port 3000");
+});
